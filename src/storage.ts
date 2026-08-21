@@ -1,4 +1,7 @@
 export type ClassLevel = 'Play Group' | 'Pre-Nursery' | 'Nursery' | 'Prep';
+export type LanguageMode = 'en' | 'ur' | 'bilingual';
+export type VoiceSpeed = 'slow' | 'normal';
+export type VoicePreferences = { enabled: boolean; autoInstructions: boolean; speed: VoiceSpeed; volume: number };
 
 export type AssignedTask = {
   id: string;
@@ -33,6 +36,9 @@ export type Profile = {
   lastPlayedActivity: string;
   resumePosition: number;
   lastPlayedAt: string;
+  language: LanguageMode;
+  phoneticName?: string;
+  voice: VoicePreferences;
 };
 
 export type Store = { version: 1; initialized: boolean; activeProfileId: string | null; parentPinHash: string | null; profiles: Profile[] };
@@ -42,9 +48,11 @@ const LEGACY_KEY = 'little-stars-progress';
 const avatarOptions = ['🦊', '🐼', '🐨', '🦁', '🐰', '🐯'];
 export const avatars = avatarOptions;
 
+export const defaultVoicePreferences: VoicePreferences = { enabled: true, autoInstructions: true, speed: 'normal', volume: 0.85 };
+
 export function newProfile(name: string, classLevel: ClassLevel, avatar = avatarOptions[0], age?: string): Profile {
   const now = new Date().toISOString();
-  return { id: `child-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: name.trim(), avatar, classLevel, age, stars: 0, coins: 0, badges: [], completed: 0, accuracy: 0, attempts: 0, streak: 0, mastered: [], practice: ['Letter sounds', 'Shapes', 'Counting'], recent: [], unlocked: ['Welcome Home'], dailyTaskIds: [], completedTaskIds: [], dailyCompleted: 0, assignedTasks: [], lastPlayedActivity: 'Not started yet', resumePosition: 0, lastPlayedAt: now };
+  return { id: `child-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: name.trim(), avatar, classLevel, age, stars: 0, coins: 0, badges: [], completed: 0, accuracy: 0, attempts: 0, streak: 0, mastered: [], practice: ['Letter sounds', 'Shapes', 'Counting'], recent: [], unlocked: ['Welcome Home'], dailyTaskIds: [], completedTaskIds: [], dailyCompleted: 0, assignedTasks: [], lastPlayedActivity: 'Not started yet', resumePosition: 0, lastPlayedAt: now, language: 'bilingual', voice: { ...defaultVoicePreferences } };
 }
 
 const sampleTaha = (): Profile => ({ ...newProfile('Taha', 'Pre-Nursery', '🦊', '4'), stars: 8, coins: 42, badges: ['First Star'], completed: 3, accuracy: 88, attempts: 7, streak: 2, mastered: ['Colors', 'Counting to 10', 'Letter A'], recent: ['Completed Letter A Matching', 'Earned a gold star', 'Practiced counting'], unlocked: ['Welcome Home', 'Letter Island', 'Number Meadow'], dailyCompleted: 3, lastPlayedActivity: 'ABC Adventure: Matching' });
@@ -74,7 +82,8 @@ export function loadStore(): Store {
 export async function hashPin(pin: string) { const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin)); return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join(''); }
 
 function normalizeProfile(profile: Profile): Profile {
-  return { ...newProfile(profile.name || 'Little Star', profile.classLevel || 'Pre-Nursery', profile.avatar || avatarOptions[0], profile.age), ...profile, badges: profile.badges || [], mastered: profile.mastered || [], practice: profile.practice || [], recent: profile.recent || [], unlocked: profile.unlocked || ['Welcome Home'], dailyTaskIds: profile.dailyTaskIds || [], completedTaskIds: profile.completedTaskIds || [], dailyCompleted: profile.dailyCompleted || 0, assignedTasks: profile.assignedTasks || [], attempts: profile.attempts || 0, streak: profile.streak || 0, resumePosition: profile.resumePosition || 0 };
+  const base = newProfile(profile.name || 'Little Star', profile.classLevel || 'Pre-Nursery', profile.avatar || avatarOptions[0], profile.age);
+  return { ...base, ...profile, language: profile.language === 'en' || profile.language === 'ur' || profile.language === 'bilingual' ? profile.language : 'bilingual', voice: { ...defaultVoicePreferences, ...(profile.voice || {}) }, badges: profile.badges || [], mastered: profile.mastered || [], practice: profile.practice || [], recent: profile.recent || [], unlocked: profile.unlocked || ['Welcome Home'], dailyTaskIds: profile.dailyTaskIds || [], completedTaskIds: profile.completedTaskIds || [], dailyCompleted: profile.dailyCompleted || 0, assignedTasks: profile.assignedTasks || [], attempts: profile.attempts || 0, streak: profile.streak || 0, resumePosition: profile.resumePosition || 0 };
 }
 
 export function saveStore(store: Store) { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch { /* Private browsing should not block play. */ } }

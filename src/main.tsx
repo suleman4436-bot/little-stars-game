@@ -3,9 +3,11 @@ import { Component, type ErrorInfo, type ReactNode, useEffect, useState } from '
 import { createRoot } from 'react-dom/client';
 import { ArrowLeft, ArrowRight, Award, BarChart3, BookOpen, Check, ChevronRight, CircleHelp, Coins, LockKeyhole, Map, Pause, Play, Plus, Pencil, RotateCcw, Settings, ShieldCheck, Star, Trash2, UserRound, Users, Volume2, VolumeX, X } from 'lucide-react';
 import { hashPin, loadStore, newProfile, saveStore, type ClassLevel as StoredClassLevel, type Profile, type Store } from './storage';
-import { allTasks, tasksFor, type Task } from './taskEngine';
+import { allTasks, taskText, tasksFor, type Task } from './taskEngine';
 import { AdventureBoard, ParentDashboard, ProfileForm, ProfilePicker } from './profileFeatures';
 import { InstallButton, PrivacyPage, QRShare, ShareButton, UpdateNotice } from './appFeatures';
+import { VoiceControls, VoiceProvider, useVoice } from './voice';
+import { ParentVoiceSettings } from './voiceFeatures';
 import './styles.css';
 
 type Screen = 'profiles' | 'profile-form' | 'privacy' | 'splash' | 'levels' | 'map' | 'adventure' | 'game' | 'complete' | 'parent';
@@ -36,10 +38,34 @@ function App() {
   const [showPin, setShowPin] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [formReturn, setFormReturn] = useState<Screen>('profiles');
+  const voice = useVoice();
   const active = store.profiles.find((profile) => profile.id === store.activeProfileId) || store.profiles[0];
   const progress = active || defaultProgress;
   const tasks = tasksFor(progress.classLevel).slice(0, 5);
+  const language = progress.language;
+  const currentTask: Task = tasks[gameIndex] || tasks[0];
   useEffect(() => saveStore(store), [store]);
+  useEffect(() => { document.documentElement.lang = language === 'ur' ? 'ur' : 'en'; document.documentElement.dir = language === 'ur' ? 'rtl' : 'ltr'; }, [language]);
+  useEffect(() => { voice.setEnabled(sound && progress.voice.enabled); }, [progress.voice.enabled, sound, voice]);
+  useEffect(() => {
+    voice.stop();
+    if (!progress.voice.autoInstructions) return;
+    const messages: Record<Screen, { en: string; ur: string }> = {
+      profiles: { en: 'Who is playing? Choose a little star.', ur: 'کون کھیل رہا ہے؟ اپنے ننھے ستارے کو منتخب کریں۔' },
+      'profile-form': { en: 'A grown-up is setting up a child profile.', ur: 'بڑا آپ کے بچے کا پروفائل بنا رہا ہے۔' },
+      privacy: { en: 'This is the privacy page for grown-ups.', ur: 'یہ بڑوں کے لیے رازداری کا صفحہ ہے۔' },
+      splash: { en: `Hello, ${progress.name}! Let’s start today’s adventure.`, ur: `السلام علیکم ${progress.name}! آج کا تعلیمی سفر شروع کرتے ہیں۔` },
+      levels: { en: `${progress.name}, choose your learning level.`, ur: `${progress.name}، اپنا تعلیمی درجہ منتخب کریں۔` },
+      map: { en: `${progress.name}, choose your next adventure.`, ur: `${progress.name}، اپنی اگلی مہم منتخب کریں۔` },
+      adventure: { en: `${progress.name}, choose one of today’s five activities.`, ur: `${progress.name}، آج کی پانچ سرگرمیوں میں سے ایک منتخب کریں۔` },
+      game: { en: taskText(currentTask, 'en', 'instruction'), ur: taskText(currentTask, 'ur', 'instruction') },
+      complete: { en: `Congratulations, ${progress.name}! You completed today’s learning adventure.`, ur: `مبارک ہو ${progress.name}! آپ نے آج کا تعلیمی سفر مکمل کر لیا ہے۔` },
+      parent: { en: 'Parent Area. Voice guidance helps children play even if they cannot read yet.', ur: 'والدین کا حصہ۔ آواز کی رہنمائی بچوں کو پڑھنا نہ آنے پر بھی کھیلنے میں مدد دیتی ہے۔' },
+    };
+    const message = messages[screen];
+    voice.speakLocalized(message, language, { key: `screen-${screen}-${active?.id}-${screen === 'game' ? gameIndex : ''}`, name: progress.name, phoneticName: progress.phoneticName, speed: progress.voice.speed, volume: progress.voice.volume });
+  // The key intentionally changes only when the screen or task changes, preventing rerender loops.
+  }, [screen, active?.id, gameIndex, progress.name, language]);
   useEffect(() => {
     if (active && active.dailyTaskIds.length === 0) setStore((current) => ({ ...current, profiles: current.profiles.map((profile) => profile.id === active.id ? { ...profile, dailyTaskIds: tasks.map((task) => task.id) } : profile) }));
   }, [active?.id]);
@@ -49,13 +75,12 @@ function App() {
   const deleteProfile = (id: string) => { if (store.profiles.length === 1) return; const remaining = store.profiles.filter((profile) => profile.id !== id); setStore((current) => ({ ...current, profiles: remaining, activeProfileId: current.activeProfileId === id ? remaining[0].id : current.activeProfileId })); };
   const selectLevel = (level: ClassLevel) => { updateActive({ classLevel: level, dailyTaskIds: tasksFor(level).slice(0, 5).map((task) => task.id), dailyCompleted: 0, resumePosition: 0 }); setScreen('map'); };
   const beginAdventure = () => { setGameIndex(active?.resumePosition || 0); setLastCorrect(null); setScreen('game'); };
-  const currentTask: Task = tasks[gameIndex] || tasks[0];
-  const answer = (word: string) => { const correct = word === currentTask.answer; setLastCorrect(correct); updateActive({ attempts: progress.attempts + 1, accuracy: correct ? Math.min(100, Math.round(((progress.accuracy * progress.attempts) + 100) / (progress.attempts + 1))) : Math.round((progress.accuracy * progress.attempts) / (progress.attempts + 1)) }); if (correct && sound) window.speechSynthesis?.speak(new SpeechSynthesisUtterance(`Wonderful, ${progress.name}!`)); };
-  const nextTask = () => { const taskDone = progress.completedTaskIds.includes(currentTask.id); const nextCompleted = taskDone ? progress.dailyCompleted : progress.dailyCompleted + 1; const completedIds = taskDone ? progress.completedTaskIds : [...progress.completedTaskIds, currentTask.id]; const finished = nextCompleted >= tasks.length; updateActive({ stars: progress.stars + (taskDone ? 0 : currentTask.reward), coins: progress.coins + (taskDone ? 0 : currentTask.coins), completed: progress.completed + (taskDone ? 0 : 1), dailyCompleted: nextCompleted, completedTaskIds: completedIds, badges: finished && !progress.badges.includes('Daily Explorer') ? [...progress.badges, 'Daily Explorer'] : progress.badges, recent: [`${currentTask.title} completed`, ...progress.recent].slice(0, 5), mastered: [...new Set([...progress.mastered, currentTask.subject])], lastPlayedActivity: currentTask.title, resumePosition: finished ? 0 : gameIndex + 1, streak: Math.max(1, progress.streak) }); if (finished) { if (sound) window.speechSynthesis?.speak(new SpeechSynthesisUtterance(`Congratulations, ${progress.name}! Good job!`)); setScreen('complete'); } else { setGameIndex(gameIndex + 1); setLastCorrect(null); } };
-  const replay = () => { if (sound) window.speechSynthesis?.speak(new SpeechSynthesisUtterance(currentTask.prompt)); };
+  const answer = (word: string) => { const correct = word === currentTask.answer; setLastCorrect(correct); updateActive({ attempts: progress.attempts + 1, accuracy: correct ? Math.min(100, Math.round(((progress.accuracy * progress.attempts) + 100) / (progress.attempts + 1))) : Math.round((progress.accuracy * progress.attempts) / (progress.attempts + 1)) }); voice.speakLocalized(correct ? currentTask.content.success : currentTask.content.retry, language, { key: `answer-${currentTask.id}-${correct}-${progress.attempts}`, name: progress.name, phoneticName: progress.phoneticName, speed: progress.voice.speed, volume: progress.voice.volume }); };
+  const nextTask = () => { const taskDone = progress.completedTaskIds.includes(currentTask.id); const nextCompleted = taskDone ? progress.dailyCompleted : progress.dailyCompleted + 1; const completedIds = taskDone ? progress.completedTaskIds : [...progress.completedTaskIds, currentTask.id]; const finished = nextCompleted >= tasks.length; updateActive({ stars: progress.stars + (taskDone ? 0 : currentTask.reward), coins: progress.coins + (taskDone ? 0 : currentTask.coins), completed: progress.completed + (taskDone ? 0 : 1), dailyCompleted: nextCompleted, completedTaskIds: completedIds, badges: finished && !progress.badges.includes('Daily Explorer') ? [...progress.badges, 'Daily Explorer'] : progress.badges, recent: [`${currentTask.title} completed`, ...progress.recent].slice(0, 5), mastered: [...new Set([...progress.mastered, currentTask.subject])], lastPlayedActivity: currentTask.title, resumePosition: finished ? 0 : gameIndex + 1, streak: Math.max(1, progress.streak) }); if (finished) { voice.speakLocalized({ en: `Congratulations, ${progress.name}! Good job!`, ur: `مبارک ہو ${progress.name}! شاباش!` }, language, { key: `complete-${progress.completedTaskIds.length}-${progress.name}`, name: progress.name, phoneticName: progress.phoneticName, speed: progress.voice.speed, volume: progress.voice.volume }); setScreen('complete'); } else { setGameIndex(gameIndex + 1); setLastCorrect(null); } };
+  const replay = () => voice.speakLocalized(currentTask.content.instruction, language, { key: `replay-${currentTask.id}-${Date.now()}`, speed: progress.voice.speed, volume: progress.voice.volume });
   const openParent = () => { setShowPin(true); };
   const saveParentPin = async (pin: string) => { const parentPinHash = await hashPin(pin); setStore((current) => ({ ...current, parentPinHash })); };
-  return <div className="app-shell"><Header screen={screen} sound={sound} setSound={setSound} onParent={openParent} onHome={() => active ? setScreen('map') : setScreen('profiles')} /><div className="utility-bar"><ShareButton compact /><QRShare /><InstallButton /><button className="privacy-link" onClick={() => setScreen('privacy')}>Privacy</button></div>
+  return <div className="app-shell"><Header screen={screen} sound={sound} setSound={(value) => { setSound(value); voice.setEnabled(value); }} onParent={openParent} onHome={() => active ? setScreen('map') : setScreen('profiles')} /><div className="utility-bar"><ShareButton compact /><QRShare /><InstallButton /><VoiceControls language={language} preferences={progress.voice} onPreferencesChange={(next) => updateActive({ voice: next })} compact /><button className="privacy-link" onClick={() => setScreen('privacy')}>Privacy</button></div>
     <main className="main-content">
       {screen === 'profiles' && <ProfilePicker profiles={store.profiles} onSelect={chooseProfile} onAdd={() => { setEditingProfile(null); setFormReturn('profiles'); setScreen('profile-form'); }} onEdit={(profile) => { setEditingProfile(profile); setFormReturn('profiles'); setScreen('profile-form'); }} onDelete={deleteProfile} />}
       {screen === 'profile-form' && <ProfileForm profile={editingProfile} onBack={() => setScreen(formReturn)} onSave={saveProfile} />}
@@ -64,9 +89,9 @@ function App() {
       {screen === 'levels' && <LevelPicker selected={progress.classLevel} onBack={() => setScreen('splash')} onSelect={selectLevel} />}
       {screen === 'map' && <Island progress={progress} onBack={() => setScreen('levels')} onPlay={() => setScreen('adventure')} />}
       {screen === 'adventure' && <AdventureBoard profile={progress} tasks={tasks} onBack={() => setScreen('map')} onPlay={beginAdventure} />}
-      {screen === 'game' && <Game question={{ letter: currentTask.subject, sound: currentTask.type, prompt: currentTask.prompt, answer: currentTask.answer, options: currentTask.options }} index={gameIndex} total={tasks.length} sound={sound} result={lastCorrect} onAnswer={answer} onReplay={replay} onBack={() => setScreen('adventure')} onNext={nextTask} />}
+      {screen === 'game' && <Game question={{ letter: currentTask.subject, sound: currentTask.type, prompt: taskText(currentTask, language, 'instruction'), answer: currentTask.answer, options: currentTask.options }} index={gameIndex} total={tasks.length} sound={sound} result={lastCorrect} onAnswer={answer} onReplay={replay} onBack={() => setScreen('adventure')} onNext={nextTask} />}
       {screen === 'complete' && <PersonalizedComplete progress={progress} onPlayAgain={() => { setGameIndex(0); setLastCorrect(null); setScreen('adventure'); }} onMap={() => setScreen('map')} onDashboard={openParent} />}
-      {screen === 'parent' && <ParentDashboard profiles={store.profiles} activeId={active?.id || ''} onBack={() => setScreen('map')} onSelect={chooseProfile} onAdd={() => { setEditingProfile(null); setFormReturn('parent'); setScreen('profile-form'); }} onEdit={(profile) => { setEditingProfile(profile); setFormReturn('parent'); setScreen('profile-form'); }} onDelete={deleteProfile} onAssign={(task) => active && updateActive({ assignedTasks: task.target === 0 ? active.assignedTasks.filter((item) => item.id !== task.id) : active.assignedTasks.some((item) => item.id === task.id) ? active.assignedTasks.map((item) => item.id === task.id ? { ...item, ...task } : item) : [...active.assignedTasks, task] })} />}
+      {screen === 'parent' && <><ParentDashboard profiles={store.profiles} activeId={active?.id || ''} onBack={() => setScreen('map')} onSelect={chooseProfile} onAdd={() => { setEditingProfile(null); setFormReturn('parent'); setScreen('profile-form'); }} onEdit={(profile) => { setEditingProfile(profile); setFormReturn('parent'); setScreen('profile-form'); }} onDelete={deleteProfile} onAssign={(task) => active && updateActive({ assignedTasks: task.target === 0 ? active.assignedTasks.filter((item) => item.id !== task.id) : active.assignedTasks.some((item) => item.id === task.id) ? active.assignedTasks.map((item) => item.id === task.id ? { ...item, ...task } : item) : [...active.assignedTasks, task] })} /><ParentVoiceSettings profile={progress} onUpdate={updateActive} /></>}
     </main><UpdateNotice />{showPin && <SecurePinModal pinHash={store.parentPinHash} onClose={() => setShowPin(false)} onSetPin={saveParentPin} onSuccess={() => { setShowPin(false); setScreen('parent'); }} />}
   </div>;
 }
@@ -100,6 +125,6 @@ export default App;
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Little Stars root element is missing');
-createRoot(root).render(<ErrorBoundary><App /></ErrorBoundary>);
+createRoot(root).render(<VoiceProvider><ErrorBoundary><App /></ErrorBoundary></VoiceProvider>);
 
 if ('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').then((registration) => { if (registration.waiting) window.dispatchEvent(new Event('little-stars-update')); registration.addEventListener('updatefound', () => { const worker = registration.installing; worker?.addEventListener('statechange', () => { if (worker.state === 'installed' && navigator.serviceWorker.controller) window.dispatchEvent(new Event('little-stars-update')); }); }); }).catch(() => { /* Offline support is optional when a browser blocks service workers. */ }); });

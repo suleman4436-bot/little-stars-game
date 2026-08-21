@@ -1,6 +1,6 @@
 /* global self, caches, fetch */
-const CACHE = 'little-stars-v1';
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/offline.html', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/icon-maskable.svg', '/icons/favicon.svg'];
+const CACHE = 'little-stars-v2';
+const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/offline.html', '/audio/manifest.json', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/icon-maskable.svg', '/icons/favicon.svg'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
 self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting(); });

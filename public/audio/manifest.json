@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "strategy": "browser-speech-fallback",
+  "note": "Local recordings may be added by a human narrator. Empty paths intentionally fall back to installed browser voices.",
+  "phrases": {
+    "welcome": { "en": "", "ur": "" },
+    "listen-carefully": { "en": "", "ur": "" },
+    "tap-correct-answer": { "en": "", "ur": "" },
+    "drag-to-match": { "en": "", "ur": "" },
+    "try-again": { "en": "", "ur": "" },
+    "excellent": { "en": "", "ur": "" },
+    "congratulations": { "en": "", "ur": "" },
+    "next-task": { "en": "", "ur": "" },
+    "task-complete": { "en": "", "ur": "" }
+  }
+}
