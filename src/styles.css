@@ -37,3 +37,4 @@ html[dir="rtl"] .voice-primary { flex-direction:row-reverse; }
 .language-switch button { min-height:38px; border-radius:999px; padding:5px 10px; background:transparent; color:#47717b; font-size:12px; font-weight:900; }
 .language-switch button.selected { background:#00658d; color:#fff; box-shadow:0 2px 0 #004e6b; }
 @media(max-width:700px){.top-actions{gap:5px}.language-switch button{padding:5px 7px;font-size:11px}.voice-speed-btn{font-size:10px;padding:5px 8px}}
+@media(max-width:420px){.brand>span:last-child{display:none}.topbar{padding-left:10px;padding-right:10px}.language-switch button{padding-left:6px;padding-right:6px}.parent-link{padding-left:8px;padding-right:8px}}
