@@ -11,6 +11,9 @@ assert.match(source, /'سیب'\.startsWith\('ا'\)/); assert.doesNotMatch(source
 assert.match(source, /language === 'ur' \? urduTasks : englishTasks/); assert.match(source, /'B', 'B', 'Bee'/); assert.match(source, /'C', 'C', 'Cat'/);
 for (const phrase of ['setCurrentIndex(0)', 'setSelectedAnswer(null)', 'setTransitioning(false)', 'currentIndex', 'questions.length - 1', 'setScreen(']) assert.ok(appSource.includes(phrase), `${phrase} navigation guard is missing`);
 assert.match(appSource, /completedTaskIds\.includes\(task\.id\)/); assert.match(appSource, /Parent Progress/); assert.match(appSource, /document\.documentElement\.dir/);
+assert.match(appSource, /global-language-switch language-switch/); assert.match(appSource, /onLanguageChange\('en'\)/); assert.match(appSource, /onLanguageChange\('ur'\)/);
+const styles = fs.readFileSync(path.resolve('src/styles.css'), 'utf8');
+assert.match(styles, /\.global-language-switch/); assert.match(styles, /flex-basis:100%/);
 for (const phrase of ['voiceschanged', 'ur-PK', 'ur-IN', 'Microsoft Asad Urdu Pakistan', 'Microsoft Uzma Urdu Pakistan']) assert.match(voiceSource, new RegExp(phrase));
 assert.doesNotMatch(voiceSource, /\/urdu\//);
 fs.writeSync(1, 'Gameplay datasets, mappings, bounded navigation, language reset, rewards, RTL/LTR, and voice selection passed.\n');

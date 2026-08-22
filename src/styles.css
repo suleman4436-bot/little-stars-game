@@ -44,3 +44,19 @@ html[dir="rtl"] .voice-primary { flex-direction:row-reverse; }
 .language-switch button.selected { background:#00658d; color:#fff; box-shadow:0 2px 0 #004e6b; }
 @media(max-width:700px){.top-actions{gap:5px}.language-switch button{padding:5px 7px;font-size:11px}.voice-speed-btn{font-size:10px;padding:5px 8px}}
 @media(max-width:420px){.brand>span:last-child{display:none}.topbar{padding-left:10px;padding-right:10px}.language-switch button{padding-left:6px;padding-right:6px}.parent-link{padding-left:8px;padding-right:8px}}
+
+/* Keep the global language control visible on every screen, including narrow Welcome layouts. */
+.topbar { min-height:72px; height:auto; flex-wrap:wrap; gap:8px; }
+.global-language-switch { flex:0 0 auto; margin-left:auto; margin-right:8px; z-index:2; }
+.top-actions { flex:0 0 auto; min-width:0; }
+.language-switch button { white-space:nowrap; }
+@media(max-width:700px) {
+  .topbar { padding-bottom:8px; }
+  .global-language-switch { order:2; flex-basis:auto; margin:0 auto; }
+  .top-actions { order:1; margin-left:auto; }
+}
+@media(max-width:420px) {
+  .topbar { gap:6px; }
+  .global-language-switch { order:3; flex-basis:100%; justify-content:center; margin:0; }
+  .top-actions { order:2; }
+}
