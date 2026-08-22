@@ -4,6 +4,7 @@ import path from 'node:path';
 
 const source = fs.readFileSync(path.resolve('src/taskEngine.ts'), 'utf8');
 const appSource = fs.readFileSync(path.resolve('src/main.tsx'), 'utf8');
+const shuffleSource = fs.readFileSync(path.resolve('src/optionShuffle.ts'), 'utf8');
 const voiceSource = fs.readFileSync(path.resolve('src/voiceService.ts'), 'utf8');
 for (const value of ['ABC Adventure', 'Count the Stars', 'Color Garden', 'Shape Safari', 'Big or Small', 'حروف کی مہم', 'ستارے گنیں', 'رنگوں کا باغ', 'اشکال کی سیر', 'بڑا یا چھوٹا']) assert.match(source, new RegExp(value));
 for (const [letter, word] of [['ا', 'انار'], ['ب', 'بکری'], ['پ', 'پتنگ'], ['ت', 'تتلی'], ['ٹ', 'ٹماٹر'], ['ج', 'جہاز'], ['چ', 'چاند'], ['د', 'درخت'], ['س', 'سیب'], ['ش', 'شیر'], ['ک', 'کتاب'], ['گ', 'گلاب'], ['م', 'مچھلی'], ['ن', 'ناشپاتی'], ['ہ', 'ہاتھی']]) assert.match(source, new RegExp(`'${letter}'.*?'${word}'`));
@@ -14,6 +15,20 @@ assert.match(appSource, /completedTaskIds\.includes\(task\.id\)/); assert.match(
 assert.match(appSource, /global-language-switch language-switch/); assert.match(appSource, /onLanguageChange\('en'\)/); assert.match(appSource, /onLanguageChange\('ur'\)/);
 const styles = fs.readFileSync(path.resolve('src/styles.css'), 'utf8');
 assert.match(styles, /\.global-language-switch/); assert.match(styles, /flex-basis:100%/);
+assert.match(shuffleSource, /for \(let index = copy\.length - 1; index > 0; index -= 1\)/);
+assert.doesNotMatch(shuffleSource, /sort\(\(\) => Math\.random\(\) - 0\.5\)/);
+assert.match(shuffleSource, /\[\.\.\.items\]/); assert.match(appSource, /optionSession\[task\.id\]\?\.options/);
+assert.match(appSource, /optionId === task\.answerId/); assert.match(appSource, /option\.id === task\.answerId/);
+assert.match(source, /id: answerId/); assert.match(source, /id: `\$\{item\.id\}-wrong-\$\{index\}`/);
+
+// Exercise the same invariants in a small deterministic test model.
+const original = [{ id: 'answer', word: 'Apple' }, { id: 'wrong-1', word: 'Bee' }, { id: 'wrong-2', word: 'Cat' }];
+const copied = [...original];
+for (let index = copied.length - 1; index > 0; index -= 1) [copied[index], copied[index - 1]] = [copied[index - 1], copied[index]];
+assert.deepEqual(original.map((item) => item.id), ['answer', 'wrong-1', 'wrong-2']);
+assert.equal(new Set(copied.map((item) => item.id)).size, 3);
+assert.equal(copied.findIndex((item) => item.id === 'answer') >= 0, true);
+assert.ok(['answer', 'wrong-1', 'wrong-2'].includes(copied[0].id));
 for (const phrase of ['voiceschanged', 'ur-PK', 'ur-IN', 'Microsoft Asad Urdu Pakistan', 'Microsoft Uzma Urdu Pakistan']) assert.match(voiceSource, new RegExp(phrase));
 assert.doesNotMatch(voiceSource, /\/urdu\//);
 fs.writeSync(1, 'Gameplay datasets, mappings, bounded navigation, language reset, rewards, RTL/LTR, and voice selection passed.\n');

@@ -1,17 +1,18 @@
 import type { ClassLevel, LanguageMode } from './storage';
 
 export type TaskType = 'multiple-choice' | 'matching-pairs' | 'sorting' | 'sequencing' | 'counting' | 'tracing' | 'listen-select' | 'memory';
-export type TaskOption = { emoji: string; word: string; wordUr?: string };
+export type TaskOption = { id: string; emoji: string; word: string; wordUr?: string };
 export type LocalizedText = { en: string; ur: string };
 export type TaskContent = { title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText; audioId: { en: string; ur: string } };
-export type Task = { id: string; letter?: string; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
+export type Task = { id: string; letter?: string; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; answerId: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
 export type AlphabetActivity = { id: string; target: string; targetName: string; answer: string; emoji: string; wrong: { word: string; emoji: string }[]; title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText };
 
 const text = (en: string, ur: string): LocalizedText => ({ en, ur });
 const alphabet = (item: AlphabetActivity, language: 'en' | 'ur', activityTitle?: string): Task => {
   const urdu = language === 'ur';
-  const options = [{ emoji: item.emoji, word: item.answer, wordUr: item.answer }, ...item.wrong.map((option) => ({ ...option, wordUr: option.word }))];
-  return { id: item.id, letter: item.target, title: activityTitle || (urdu ? item.title.ur : item.title.en), subject: urdu ? 'حروف' : 'Letters', type: 'multiple-choice', prompt: urdu ? item.instruction.ur : item.instruction.en, hint: urdu ? item.hint.ur : item.hint.en, answer: item.answer, options, reward: 3, coins: 12, content: { title: item.title, instruction: item.instruction, hint: item.hint, success: item.success, retry: item.retry, audioId: { en: `task-${item.id}`, ur: `task-${item.id}` } } };
+  const answerId = `${item.id}-answer`;
+  const options = [{ id: answerId, emoji: item.emoji, word: item.answer, wordUr: item.answer }, ...item.wrong.map((option, index) => ({ id: `${item.id}-wrong-${index}`, ...option, wordUr: option.word }))];
+  return { id: item.id, letter: item.target, title: activityTitle || (urdu ? item.title.ur : item.title.en), subject: urdu ? 'حروف' : 'Letters', type: 'multiple-choice', prompt: urdu ? item.instruction.ur : item.instruction.en, hint: urdu ? item.hint.ur : item.hint.en, answer: item.answer, answerId, options, reward: 3, coins: 12, content: { title: item.title, instruction: item.instruction, hint: item.hint, success: item.success, retry: item.retry, audioId: { en: `task-${item.id}`, ur: `task-${item.id}` } } };
 };
 
 const urduEntries: Array<[string, string, string, string]> = [
