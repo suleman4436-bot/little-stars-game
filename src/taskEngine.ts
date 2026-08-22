@@ -1,59 +1,61 @@
 import type { ClassLevel, LanguageMode } from './storage';
-import { repairMojibake } from './text';
 
 export type TaskType = 'multiple-choice' | 'matching-pairs' | 'sorting' | 'sequencing' | 'counting' | 'tracing' | 'listen-select' | 'memory';
 export type TaskOption = { emoji: string; word: string; wordUr?: string };
 export type LocalizedText = { en: string; ur: string };
 export type TaskContent = { title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText; audioId: { en: string; ur: string } };
-export type Task = { id: string; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
+export type Task = { id: string; letter?: string; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
+export type AlphabetActivity = { id: string; target: string; targetName: string; answer: string; emoji: string; wrong: { word: string; emoji: string }[]; title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText };
 
-const urdu: Record<string, Partial<TaskContent>> = {
-  'match-a': { title: { en: 'ABC Adventure', ur: 'حروف کی مہم' }, instruction: { en: 'Find the picture that starts with A.', ur: 'وہ تصویر دبائیں جو ا سے شروع ہوتی ہے۔' }, hint: { en: 'Listen for the A sound.', ur: 'ا کی آواز سنیں۔' }, success: { en: 'Wonderful! You found the apple.', ur: 'شاباش! آپ نے سیب ڈھونڈ لیا۔' } },
-  'count-stars': { title: { en: 'Count the Stars', ur: 'ستارے گنیں' }, instruction: { en: 'How many stars can you see?', ur: 'آپ کو کتنے ستارے نظر آ رہے ہیں؟' }, hint: { en: 'Count each star slowly.', ur: 'ہر ستارہ آہستہ آہستہ گنیں۔' } },
-  'color-sort': { title: { en: 'Color Garden', ur: 'رنگوں کا باغ' }, instruction: { en: 'Which one is blue?', ur: 'نیلا رنگ کون سا ہے؟' }, hint: { en: 'Look for the color of the sky.', ur: 'آسمان کا رنگ دیکھیں۔' } },
-  'shape-friend': { title: { en: 'Shape Safari', ur: 'شکلوں کی سیر' }, instruction: { en: 'Which picture is a circle?', ur: 'دائرے والی تصویر کون سی ہے؟' }, hint: { en: 'A circle is round.', ur: 'دائرہ گول ہوتا ہے۔' } },
-  'big-small': { title: { en: 'Big or Small', ur: 'بڑا یا چھوٹا' }, instruction: { en: 'Which animal is big?', ur: 'کون سا جانور بڑا ہے؟' }, hint: { en: 'Think about the animal that needs more space.', ur: 'اس جانور کے بارے میں سوچیں جسے زیادہ جگہ چاہیے۔' } },
-  'upper-lower': { title: { en: 'Letter Friends', ur: 'حروف کے دوست' }, instruction: { en: 'Match uppercase A with its lowercase friend.', ur: 'بڑے ا کو اس کے چھوٹے دوست سے ملائیں۔' }, hint: { en: 'Uppercase A and lowercase a are friends.', ur: 'بڑا ا اور چھوٹا ا دوست ہیں۔' } },
-  'missing-letter': { title: { en: 'Missing Letter', ur: 'گم شدہ حرف' }, instruction: { en: 'What letter comes after A?', ur: 'ا کے بعد کون سا حرف آتا ہے؟' }, hint: { en: 'Say A, then the next letter.', ur: 'ا کہیں، پھر اگلا حرف کہیں۔' } },
-  'number-quantity': { title: { en: 'Number Meadow', ur: 'نمبروں کا میدان' }, instruction: { en: 'Which group shows six?', ur: 'چھ چیزوں والا گروپ کون سا ہے؟' }, hint: { en: 'Count the dots in each group.', ur: 'ہر گروپ کے نقطے گنیں۔' } },
-  'word-picture': { title: { en: 'Word Picnic', ur: 'لفظوں کی پکنک' }, instruction: { en: 'Which picture matches the sun?', ur: 'سورج سے ملتی تصویر کون سی ہے؟' }, hint: { en: 'The sun shines in the sky.', ur: 'سورج آسمان میں چمکتا ہے۔' } },
-  'memory-cards': { title: { en: 'Memory Garden', ur: 'یادداشت کا باغ' }, instruction: { en: 'Find the matching pair.', ur: 'ملتا جلتا جوڑا ڈھونڈیں۔' }, hint: { en: 'Look carefully and remember.', ur: 'غور سے دیکھیں اور یاد رکھیں۔' } },
-  'word-builder': { title: { en: 'Word Builder', ur: 'لفظ بنائیں' }, instruction: { en: 'Which word starts with c-a-t?', ur: 'کون سا لفظ ک، اے، ٹ سے شروع ہوتا ہے؟' }, hint: { en: 'Blend the sounds c, a, t.', ur: 'ک، اے، ٹ کی آوازیں ملائیں۔' } },
-  'beginning-sound': { title: { en: 'Sound Detective', ur: 'آواز کے جاسوس' }, instruction: { en: 'Which word begins with the m sound?', ur: 'کون سا لفظ م کی آواز سے شروع ہوتا ہے؟' }, hint: { en: 'Say each word out loud.', ur: 'ہر لفظ اونچی آواز میں کہیں۔' } },
-  'missing-number': { title: { en: 'Number Path', ur: 'نمبروں کا راستہ' }, instruction: { en: 'What number is missing: one, two, blank, four?', ur: 'ایک، دو، خالی، چار میں کون سا نمبر گم ہے؟' }, hint: { en: 'Count forward from one.', ur: 'ایک سے آگے گنیں۔' } },
-  'picture-addition': { title: { en: 'Picture Addition', ur: 'تصویری جمع' }, instruction: { en: 'What is two apples plus one apple?', ur: 'دو سیب جمع ایک سیب کتنے ہوئے؟' }, hint: { en: 'Put the apples together.', ur: 'سیبوں کو ایک ساتھ گنیں۔' } },
-  'pattern': { title: { en: 'Pattern Path', ur: 'ترتیب کا راستہ' }, instruction: { en: 'What comes next in the pattern?', ur: 'ترتیب میں اگلا کیا آئے گا؟' }, hint: { en: 'The colors take turns.', ur: 'رنگ باری باری آتے ہیں۔' } },
+const text = (en: string, ur: string): LocalizedText => ({ en, ur });
+const alphabet = (item: AlphabetActivity, language: 'en' | 'ur', activityTitle?: string): Task => {
+  const urdu = language === 'ur';
+  const options = [{ emoji: item.emoji, word: item.answer, wordUr: item.answer }, ...item.wrong.map((option) => ({ ...option, wordUr: option.word }))];
+  return { id: item.id, letter: item.target, title: activityTitle || (urdu ? item.title.ur : item.title.en), subject: urdu ? 'حروف' : 'Letters', type: 'multiple-choice', prompt: urdu ? item.instruction.ur : item.instruction.en, hint: urdu ? item.hint.ur : item.hint.en, answer: item.answer, options, reward: 3, coins: 12, content: { title: item.title, instruction: item.instruction, hint: item.hint, success: item.success, retry: item.retry, audioId: { en: `task-${item.id}`, ur: `task-${item.id}` } } };
 };
 
-function content(id: string, title: string, prompt: string, hint: string): TaskContent {
-  const specific = urdu[id] || {};
-  const clean = (value: LocalizedText): LocalizedText => ({ en: value.en, ur: repairMojibake(value.ur) });
-  return { title: clean(specific.title || { en: title, ur: title }), instruction: clean(specific.instruction || { en: prompt, ur: 'تصویر دیکھیں اور صحیح جواب دبائیں۔' }), hint: clean(specific.hint || { en: hint, ur: 'اشارے کو غور سے سنیں۔' }), success: clean(specific.success || { en: 'Great job! That is correct.', ur: 'شاباش! یہ صحیح جواب ہے۔' }), retry: clean({ en: 'Try again. You can do it!', ur: 'دوبارہ کوشش کریں، آپ کر سکتے ہیں!' }), audioId: { en: `task-${id}`, ur: `task-${id}` } };
+const urduEntries: Array<[string, string, string, string]> = [
+  ['ا', 'الف', 'انار', '🍎'], ['ب', 'ب', 'بکری', '🐐'], ['پ', 'پ', 'پتنگ', '🪁'], ['ت', 'ت', 'تتلی', '🦋'], ['ٹ', 'ٹ', 'ٹماٹر', '🍅'], ['ج', 'ج', 'جہاز', '✈️'], ['چ', 'چ', 'چاند', '🌙'], ['د', 'د', 'درخت', '🌳'], ['س', 'س', 'سیب', '🍎'], ['ش', 'ش', 'شیر', '🦁'], ['ک', 'ک', 'کتاب', '📖'], ['گ', 'گ', 'گلاب', '🌹'], ['م', 'م', 'مچھلی', '🐟'], ['ن', 'ن', 'ناشپاتی', '🍐'], ['ہ', 'ہ', 'ہاتھی', '🐘'],
+];
+export const urduAlphabetActivities: AlphabetActivity[] = urduEntries.map(([target, targetName, answer, emoji], index) => {
+  const wrongEntries = urduEntries.filter(([letter]) => letter !== target);
+  const preferred = index < 3 ? (index === 0 ? ['بکری', 'پتنگ'] : index === 1 ? ['انار', 'پتنگ'] : ['انار', 'بکری']) : wrongEntries.slice(index % 5, index % 5 + 2).map((entry) => entry[2]);
+  const wrong = preferred.map((word) => { const entry = urduEntries.find((candidate) => candidate[2] === word)!; return { word, emoji: entry[3] }; });
+  return { id: `urdu-${index}-${target}`, target, targetName, answer, emoji, wrong, title: text('', `${targetName} سے ${answer}`), instruction: text('', `وہ تصویر منتخب کریں جو ${targetName} سے شروع ہوتی ہے۔ ${targetName} سے ${answer}۔`), hint: text('', `${answer} کی تصویر تلاش کریں۔`), success: text('', index === 1 ? `بہت خوب! ${targetName} سے ${answer}۔` : `شاباش! ${targetName} سے ${answer}۔`), retry: text('', 'یہ درست جواب نہیں ہے۔ دوبارہ کوشش کریں۔') };
+});
+
+// Keep the exact spoken Urdu curriculum strings explicit and auditable.
+urduAlphabetActivities[0].instruction.ur = 'وہ تصویر منتخب کریں جو الف سے شروع ہوتی ہے۔ الف سے انار۔';
+urduAlphabetActivities[1].instruction.ur = 'وہ تصویر منتخب کریں جو ب سے شروع ہوتی ہے۔ ب سے بکری۔';
+urduAlphabetActivities[2].instruction.ur = 'وہ تصویر منتخب کریں جو پ سے شروع ہوتی ہے۔ پ سے پتنگ۔';
+
+const englishEntries: Array<[string, string, string, string, string[]]> = [
+  ['A', 'A', 'Apple', '🍎', ['Bee', 'Cat']], ['B', 'B', 'Bee', '🐝', ['Apple', 'Cat']], ['C', 'C', 'Cat', '🐱', ['Apple', 'Bee']], ['D', 'D', 'Dog', '🐶', ['Apple', 'Bee']], ['E', 'E', 'Egg', '🥚', ['Apple', 'Cat']],
+];
+export const englishAlphabetActivities: AlphabetActivity[] = englishEntries.map(([target, targetName, answer, emoji, wrongWords], index) => ({ id: `english-${target.toLowerCase()}`, target, targetName, answer, emoji, wrong: wrongWords.map((word) => ({ word, emoji: word === 'Apple' ? '🍎' : word === 'Bee' ? '🐝' : word === 'Cat' ? '🐱' : '🐶' })), title: text(['ABC Adventure', 'ABC Adventure', 'ABC Adventure', 'Letter Adventure', 'Letter Adventure'][index], ''), instruction: text(`Find the picture that starts with ${target}.`, ''), hint: text(`Listen for the ${target} sound.`, ''), success: text(index === 0 ? 'Amazing! A is for Apple.' : index === 1 ? 'Brilliant! B is for Bee.' : index === 2 ? 'Correct! C is for Cat.' : `Great! ${target} is for ${answer}.`, ''), retry: text('Let’s try again. Listen carefully.', '') }));
+
+export const urduActivityLabels = ['حروف کی مہم', 'تصویر منتخب کریں', 'حرف اور تصویر ملائیں', 'نقطے ملا کر حرف بنائیں', 'آواز سن کر حرف منتخب کریں', 'ایک جیسے حروف ملائیں', 'لفظ کا پہلا حرف پہچانیں'] as const;
+export const englishActivityLabels = ['ABC Adventure', 'Count the Stars', 'Color Garden', 'Shape Safari', 'Big or Small'] as const;
+export const urduAdventureLabels = ['حروف کی مہم', 'ستارے گنیں', 'رنگوں کا باغ', 'اشکال کی سیر', 'بڑا یا چھوٹا'] as const;
+
+export const englishTasks = englishAlphabetActivities.map((item, index) => alphabet(item, 'en', englishActivityLabels[index]));
+export const urduTasks = urduAlphabetActivities.map((item) => alphabet(item, 'ur', item === urduAlphabetActivities[0] ? 'حروف کی مہم' : undefined));
+
+export function validateAlphabetActivities(items: AlphabetActivity[], language: 'en' | 'ur'): string[] {
+  const errors: string[] = [];
+  for (const item of items) {
+    const options = [item.answer, ...item.wrong.map((option) => option.word)];
+    if (new Set(options).size !== options.length) errors.push(`${item.id}: duplicate option`);
+    if (!item.answer.startsWith(item.target)) errors.push(`${item.id}: answer does not start with ${item.target}`);
+    if (item.wrong.some((option) => option.word.startsWith(item.target))) errors.push(`${item.id}: wrong option starts with ${item.target}`);
+    if (language === 'ur' && /[A-Za-z]/.test(item.target + item.answer)) errors.push(`${item.id}: English content in Urdu dataset`);
+  }
+  return errors;
 }
-const task = (id: string, title: string, subject: string, type: TaskType, prompt: string, hint: string, answer: string, options: TaskOption[], reward = 2, coins = 8): Task => ({ id, title, subject, type, prompt, hint, answer, options, reward, coins, content: content(id, title, prompt, hint) });
+export const urduAlphabetValidationErrors = validateAlphabetActivities(urduAlphabetActivities, 'ur');
+if (urduAlphabetValidationErrors.length) throw new Error(urduAlphabetValidationErrors.join('; '));
+if ('سیب'.startsWith('ا') || !'انار'.startsWith('ا') || !'سیب'.startsWith('س')) throw new Error('Urdu alphabet regression validation failed');
 
-const common = [
-  task('match-a', 'ABC Adventure', 'Letters', 'multiple-choice', 'Find the picture that starts with A', 'Listen for the A sound.', 'Apple', [{ emoji: '🍎', word: 'Apple', wordUr: 'سیب' }, { emoji: '🐝', word: 'Bee', wordUr: 'شہد کی مکھی' }, { emoji: '🐱', word: 'Cat', wordUr: 'بلی' }], 3, 12),
-  task('count-stars', 'Count the Stars', 'Numbers', 'counting', 'How many stars can you see?', 'Count each star slowly.', '5', [{ emoji: '⭐', word: '3' }, { emoji: '⭐⭐⭐⭐⭐', word: '5' }, { emoji: '⭐⭐⭐⭐', word: '4' }]),
-  task('color-sort', 'Color Garden', 'Colors', 'sorting', 'Which one is blue?', 'Look for the color of the sky.', 'Blue', [{ emoji: '🔵', word: 'Blue', wordUr: 'نیلا' }, { emoji: '🟡', word: 'Yellow', wordUr: 'پیلا' }, { emoji: '🔴', word: 'Red', wordUr: 'لال' }]),
-  task('shape-friend', 'Shape Safari', 'Shapes', 'matching-pairs', 'Which picture is a circle?', 'A circle is round all the way around.', 'Circle', [{ emoji: '⚪', word: 'Circle', wordUr: 'دائرہ' }, { emoji: '🔺', word: 'Triangle', wordUr: 'مثلث' }, { emoji: '🟦', word: 'Square', wordUr: 'مربع' }]),
-  task('big-small', 'Big or Small', 'Thinking', 'multiple-choice', 'Which animal is big?', 'Think about the animal that needs the most space.', 'Elephant', [{ emoji: '🐘', word: 'Elephant', wordUr: 'ہاتھی' }, { emoji: '🐭', word: 'Mouse', wordUr: 'چوہا' }, { emoji: '🐜', word: 'Ant', wordUr: 'چیونٹی' }]),
-];
-const nursery = [
-  task('upper-lower', 'Letter Friends', 'Letters', 'matching-pairs', 'Match the uppercase A with its lowercase friend.', 'Uppercase A and lowercase a are friends.', 'a', [{ emoji: '🔤', word: 'a' }, { emoji: '💡', word: 'b' }, { emoji: '🔠', word: 'c' }]),
-  task('missing-letter', 'Missing Letter', 'Letters', 'multiple-choice', 'What letter comes after A?', 'Say A, then the next letter.', 'B', [{ emoji: '🅱️', word: 'B' }, { emoji: '©️', word: 'C' }, { emoji: '🅰️', word: 'A' }]),
-  task('number-quantity', 'Number Meadow', 'Numbers', 'counting', 'Which group shows 6?', 'Count the dots in each group.', '6', [{ emoji: '•••', word: '3' }, { emoji: '••••••', word: '6' }, { emoji: '••••', word: '4' }]),
-  task('word-picture', 'Word Picnic', 'Words', 'multiple-choice', 'Which picture matches sun?', 'The sun shines in the sky.', 'Sun', [{ emoji: '☀️', word: 'Sun' }, { emoji: '🌧️', word: 'Rain' }, { emoji: '🌙', word: 'Moon' }]),
-  task('memory-cards', 'Memory Garden', 'Memory', 'memory', 'Find the matching pair.', 'Look carefully and remember.', 'Butterfly', [{ emoji: '🦋', word: 'Butterfly' }, { emoji: '🌼', word: 'Flower' }, { emoji: '🐞', word: 'Ladybug' }]),
-];
-const prep = [
-  task('word-builder', 'Word Builder', 'Reading', 'multiple-choice', 'Which word starts with c-a-t?', 'Blend the sounds c, a, t.', 'CAT', [{ emoji: '🐱', word: 'CAT' }, { emoji: '🐶', word: 'DOG' }, { emoji: '🐝', word: 'BEE' }]),
-  task('beginning-sound', 'Sound Detective', 'Reading', 'listen-select', 'Which word begins with the m sound?', 'Say each word out loud.', 'Moon', [{ emoji: '🌙', word: 'Moon' }, { emoji: '☀️', word: 'Sun' }, { emoji: '🐟', word: 'Fish' }]),
-  task('missing-number', 'Number Path', 'Maths', 'multiple-choice', 'What number is missing: 1, 2, __, 4?', 'Count forward from one.', '3', [{ emoji: '3️⃣', word: '3' }, { emoji: '5️⃣', word: '5' }, { emoji: '1️⃣', word: '1' }]),
-  task('picture-addition', 'Picture Addition', 'Maths', 'counting', 'What is 2 apples plus 1 apple?', 'Put the apples together.', '3', [{ emoji: '🍎🍎🍎', word: '3' }, { emoji: '🍎🍎', word: '2' }, { emoji: '🍎🍎🍎🍎', word: '4' }]),
-  task('pattern', 'Pattern Path', 'Thinking', 'sequencing', 'What comes next: blue, yellow, blue, blank?', 'The colors take turns.', 'Yellow', [{ emoji: '🟡', word: 'Yellow' }, { emoji: '🔵', word: 'Blue' }, { emoji: '🟢', word: 'Green' }]),
-];
-
-export const tasksFor = (level: ClassLevel): Task[] => level === 'Nursery' ? nursery : level === 'Prep' ? prep : common;
-export const allTasks = [...common, ...nursery, ...prep];
-export const taskText = (task: Task, language: LanguageMode, field: keyof Omit<TaskContent, 'audioId'>): string => language === 'ur' ? task.content[field].ur : language === 'bilingual' ? `${task.content[field].en}۔ ${task.content[field].ur}` : task.content[field].en;
+export const tasksFor = (_level: ClassLevel, language: LanguageMode = 'en'): Task[] => language === 'ur' ? urduTasks : englishTasks;
+export const allTasks = [...englishTasks, ...urduTasks];
+export const taskText = (task: Task, language: LanguageMode, field: keyof Omit<TaskContent, 'audioId'>): string => language === 'ur' ? task.content[field].ur : task.content[field].en;
