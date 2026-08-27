@@ -19,6 +19,12 @@
 .voice-settings-panel { grid-column:1 / -1; }
 .activity-actions,.completion-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:9px; margin:8px auto 14px; }
 .activity-actions .secondary-btn,.completion-actions .secondary-btn,.completion-actions .primary-btn { padding:10px 14px; font-size:12px; }
+.memory-grid { display:grid; grid-template-columns:repeat(4,minmax(62px,1fr)); gap:12px; max-width:560px; margin:24px auto 8px; }
+.memory-card { min-height:112px; border:3px solid #dfeeed; border-radius:20px; background:#f5fbfa; display:grid; place-items:center; align-content:center; gap:5px; color:var(--blue-dark); box-shadow:0 4px 0 #dfe9e8; }
+.memory-card span { font-size:42px; }
+.memory-card strong { font-size:11px; }
+.memory-card.open { background:#eaf9fd; border-color:var(--blue); }
+@media(max-width:520px){.memory-grid{grid-template-columns:repeat(4,1fr);gap:7px}.memory-card{min-height:78px;border-radius:14px}.memory-card span{font-size:31px}.memory-card strong{font-size:9px}}
 .completion-actions { max-width:780px; }
 .voice-settings-panel .panel-heading { align-items:flex-start; }
 .voice-settings-panel .panel-heading > span { display:inline-flex; align-items:center; gap:5px; }

@@ -5,7 +5,8 @@ export type TaskOption = { id: string; emoji: string; word: string; wordUr?: str
 export type LocalizedText = { en: string; ur: string };
 export type TaskContent = { title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText; audioId: { en: string; ur: string } };
 export type Task = { id: string; letter?: string; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; answerId: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
-export type ActivityDefinition = { id: string; icon: string; title: string; category: string; typeLabel: string; description: string; tasks: Task[] };
+export type MemoryPair = { id: string; emoji: string; en: string; ur: string };
+export type ActivityDefinition = { id: string; icon: string; title: string; category: string; typeLabel: string; description: string; tasks: Task[]; game?: 'question' | 'memory'; memoryPairs?: MemoryPair[] };
 export type AlphabetActivity = { id: string; target: string; targetName: string; answer: string; emoji: string; wrong: { word: string; emoji: string }[]; title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText };
 
 const text = (en: string, ur: string): LocalizedText => ({ en, ur });
@@ -62,12 +63,61 @@ const urduIndependent = [
   independentOptions('urdu-big-small', 'ur', 'بڑا یا چھوٹا', 'سوچ اور سمجھ', 'multiple-choice', 'بڑا جانور منتخب کریں۔', 'بڑی چیز تلاش کریں۔', 'ہاتھی', 'ہاتھی', '🐘', [{ word: 'چوہا', wordUr: 'چوہا', emoji: '🐭' }, { word: 'چیونٹی', wordUr: 'چیونٹی', emoji: '🐜' }], 'The elephant is big.', 'شاباش! ہاتھی بڑا ہے۔'),
 ];
 
+const animalTask = (language: 'en' | 'ur', index: number, answer: string, answerUr: string, emoji: string, wrong: Array<{ word: string; wordUr: string; emoji: string }>, clue: string, clueUr: string) => independentOptions(`animal-sounds-${language}-${index}`, language, language === 'en' ? 'Animal Sounds' : 'جانوروں کی آوازیں', language === 'en' ? 'Animals' : 'جانور', 'listen-select', language === 'en' ? `Listen carefully. Which animal makes this sound? ${clue}` : `غور سے آواز سنیں۔ یہ کس جانور کی آواز ہے؟ ${clueUr}`, language === 'en' ? 'Listen for the animal clue.' : 'جانور کی آواز کا اشارہ سنیں۔', answer, answerUr, emoji, wrong, `Wonderful! This is a ${answer}.`, `شاباش! یہ ${answerUr} ہے۔`);
+const animalEnglish = [
+  animalTask('en', 0, 'Cat', 'بلی', '🐱', [{ word: 'Dog', wordUr: 'کتا', emoji: '🐶' }, { word: 'Cow', wordUr: 'گائے', emoji: '🐮' }], 'Which animal says meow?', 'کون سا جانور میاؤں کہتا ہے؟'),
+  animalTask('en', 1, 'Dog', 'کتا', '🐶', [{ word: 'Goat', wordUr: 'بکری', emoji: '🐐' }, { word: 'Duck', wordUr: 'بطخ', emoji: '🦆' }], 'Which animal says woof?', 'کون سا جانور بھوں بھوں کرتا ہے؟'),
+  animalTask('en', 2, 'Cow', 'گائے', '🐮', [{ word: 'Lion', wordUr: 'شیر', emoji: '🦁' }, { word: 'Horse', wordUr: 'گھوڑا', emoji: '🐴' }], 'Which animal says moo?', 'کون سا جانور موں کہتا ہے؟'),
+  animalTask('en', 3, 'Lion', 'شیر', '🦁', [{ word: 'Sheep', wordUr: 'بھیڑ', emoji: '🐑' }, { word: 'Cat', wordUr: 'بلی', emoji: '🐱' }], 'Which animal roars?', 'کون سا جانور دھاڑتا ہے؟'),
+];
+const animalUrdu = [
+  animalTask('ur', 0, 'بلی', 'بلی', '🐱', [{ word: 'کتا', wordUr: 'کتا', emoji: '🐶' }, { word: 'گائے', wordUr: 'گائے', emoji: '🐮' }], 'کون سا جانور میاؤں کہتا ہے؟', 'کون سا جانور میاؤں کہتا ہے؟'),
+  animalTask('ur', 1, 'کتا', 'کتا', '🐶', [{ word: 'بکری', wordUr: 'بکری', emoji: '🐐' }, { word: 'بطخ', wordUr: 'بطخ', emoji: '🦆' }], 'کون سا جانور بھوں بھوں کرتا ہے؟', 'کون سا جانور بھوں بھوں کرتا ہے؟'),
+  animalTask('ur', 2, 'گائے', 'گائے', '🐮', [{ word: 'شیر', wordUr: 'شیر', emoji: '🦁' }, { word: 'گھوڑا', wordUr: 'گھوڑا', emoji: '🐴' }], 'کون سا جانور موں کہتا ہے؟', 'کون سا جانور موں کہتا ہے؟'),
+  animalTask('ur', 3, 'شیر', 'شیر', '🦁', [{ word: 'بھیڑ', wordUr: 'بھیڑ', emoji: '🐑' }, { word: 'بلی', wordUr: 'بلی', emoji: '🐱' }], 'کون سا جانور دھاڑتا ہے؟', 'کون سا جانور دھاڑتا ہے؟'),
+];
+
+const numberTrainEnglish = [
+  independentOptions('number-train-en-1', 'en', 'Number Train', 'Numbers', 'sequencing', 'Which number is missing from the train?', 'Complete the train in order.', '3', '۳', '🚂', [{ word: '2', wordUr: '۲', emoji: '🚃' }, { word: '5', wordUr: '۵', emoji: '🚃' }], 'Excellent! 3 completes the train.', 'بہت خوب! ۳ سے ریل گاڑی مکمل ہوگئی۔'),
+  independentOptions('number-train-en-2', 'en', 'Number Train', 'Numbers', 'sequencing', 'Which number is missing from the train?', 'Look at the numbers around the gap.', '3', '۳', '🚂', [{ word: '1', wordUr: '۱', emoji: '🚃' }, { word: '4', wordUr: '۴', emoji: '🚃' }], 'Excellent! 3 completes the train.', 'بہت خوب! ۳ سے ریل گاڑی مکمل ہوگئی۔'),
+  independentOptions('number-train-en-3', 'en', 'Number Train', 'Numbers', 'sequencing', 'Which number is missing from the train?', 'Count forward from 5.', '8', '۸', '🚂', [{ word: '6', wordUr: '۶', emoji: '🚃' }, { word: '10', wordUr: '۱۰', emoji: '🚃' }], 'Excellent! 8 completes the train.', 'بہت خوب! ۸ سے ریل گاڑی مکمل ہوگئی۔'),
+  independentOptions('number-train-en-4', 'en', 'Number Train', 'Numbers', 'sequencing', 'Which number is missing from the train?', 'Find the number between 7 and 9.', '8', '۸', '🚂', [{ word: '6', wordUr: '۶', emoji: '🚃' }, { word: '10', wordUr: '۱۰', emoji: '🚃' }], 'Excellent! 8 completes the train.', 'بہت خوب! ۸ سے ریل گاڑی مکمل ہوگئی۔'),
+];
+const numberTrainUrdu = numberTrainEnglish.map((task, index) => independentOptions(`number-train-ur-${index + 1}`, 'ur', 'نمبروں کی ریل گاڑی', 'اعداد', 'sequencing', 'ریل گاڑی میں کون سا عدد غائب ہے؟', 'خالی جگہ کا عدد تلاش کریں۔', index < 2 ? '۳' : '۸', index < 2 ? '۳' : '۸', '🚂', index < 2 ? [{ word: '۲', wordUr: '۲', emoji: '🚃' }, { word: '۵', wordUr: '۵', emoji: '🚃' }] : [{ word: '۶', wordUr: '۶', emoji: '🚃' }, { word: '۱۰', wordUr: '۱۰', emoji: '🚃' }], 'The train is complete.', index < 2 ? 'بہت خوب! ۳ سے ریل گاڑی مکمل ہوگئی۔' : 'بہت خوب! ۸ سے ریل گاڑی مکمل ہوگئی۔'));
+
+const patternEnglish = [
+  independentOptions('pattern-en-1', 'en', 'Complete the Pattern', 'Thinking', 'sequencing', 'Look at the pattern. What comes next?', 'Red, blue, red, blue…', 'Red', 'سرخ', '🔴', [{ word: 'Blue', wordUr: 'نیلا', emoji: '🔵' }, { word: 'Yellow', wordUr: 'پیلا', emoji: '🟡' }], 'Brilliant! You completed the pattern.', 'بہت خوب! آپ نے ترتیب مکمل کردی۔'),
+  independentOptions('pattern-en-2', 'en', 'Complete the Pattern', 'Thinking', 'sequencing', 'Look at the pattern. What comes next?', 'Circle, square, circle, square…', 'Circle', 'دائرہ', '⚪', [{ word: 'Square', wordUr: 'مربع', emoji: '🟦' }, { word: 'Triangle', wordUr: 'مثلث', emoji: '🔺' }], 'Brilliant! You completed the pattern.', 'بہت خوب! آپ نے ترتیب مکمل کردی۔'),
+  independentOptions('pattern-en-3', 'en', 'Complete the Pattern', 'Thinking', 'sequencing', 'Look at the pattern. What comes next?', 'Star, heart, star, heart…', 'Star', 'ستارہ', '⭐', [{ word: 'Heart', wordUr: 'دل', emoji: '❤️' }, { word: 'Moon', wordUr: 'چاند', emoji: '🌙' }], 'Brilliant! You completed the pattern.', 'بہت خوب! آپ نے ترتیب مکمل کردی۔'),
+];
+const patternUrdu = patternEnglish.map((task, index) => independentOptions(`pattern-ur-${index + 1}`, 'ur', 'ترتیب مکمل کریں', 'سوچ اور سمجھ', 'sequencing', 'ترتیب کو غور سے دیکھیں۔ اب آگے کیا آئے گا؟', 'ترتیب میں اگلی چیز تلاش کریں۔', ['سرخ', 'دائرہ', 'ستارہ'][index], ['سرخ', 'دائرہ', 'ستارہ'][index], ['🔴', '⚪', '⭐'][index], index === 0 ? [{ word: 'نیلا', wordUr: 'نیلا', emoji: '🔵' }, { word: 'پیلا', wordUr: 'پیلا', emoji: '🟡' }] : index === 1 ? [{ word: 'مربع', wordUr: 'مربع', emoji: '🟦' }, { word: 'مثلث', wordUr: 'مثلث', emoji: '🔺' }] : [{ word: 'دل', wordUr: 'دل', emoji: '❤️' }, { word: 'چاند', wordUr: 'چاند', emoji: '🌙' }], 'The pattern is complete.', 'بہت خوب! آپ نے ترتیب مکمل کردی۔'));
+
+const habitEnglish = [
+  independentOptions('habits-en-1', 'en', 'Good Habits', 'Life Skills', 'multiple-choice', 'Which is the good habit?', 'Choose the healthy action.', 'Wash hands', 'ہاتھ دھونا', '🧼', [{ word: 'Skip washing', wordUr: 'ہاتھ نہ دھونا', emoji: '🙅' }, { word: 'Make a mess', wordUr: 'گندگی کرنا', emoji: '🗑️' }], 'Well done! That is a good habit.', 'شاباش! یہ ایک اچھی عادت ہے۔'),
+  independentOptions('habits-en-2', 'en', 'Good Habits', 'Life Skills', 'multiple-choice', 'Which is the good habit?', 'Choose the kind action.', 'Share toys', 'کھلونے بانٹنا', '🧸', [{ word: 'Grab toys', wordUr: 'کھلونے چھیننا', emoji: '✋' }, { word: 'Hide toys', wordUr: 'کھلونے چھپانا', emoji: '🙈' }], 'Well done! That is a good habit.', 'شاباش! یہ ایک اچھی عادت ہے۔'),
+  independentOptions('habits-en-3', 'en', 'Good Habits', 'Life Skills', 'multiple-choice', 'Which is the good habit?', 'Choose the safe action.', 'Use the bin', 'کچرا ڈبے میں ڈالنا', '🗑️', [{ word: 'Drop rubbish', wordUr: 'کچرا پھینکنا', emoji: '🚮' }, { word: 'Leave a mess', wordUr: 'گندگی چھوڑنا', emoji: '🧹' }], 'Well done! That is a good habit.', 'شاباش! یہ ایک اچھی عادت ہے۔'),
+];
+const habitUrdu = [
+  independentOptions('habits-ur-1', 'ur', 'اچھی عادتیں', 'روزمرہ زندگی', 'multiple-choice', 'ان میں اچھی عادت کون سی ہے؟', 'صحت مند عمل منتخب کریں۔', 'ہاتھ دھونا', 'ہاتھ دھونا', '🧼', [{ word: 'ہاتھ نہ دھونا', wordUr: 'ہاتھ نہ دھونا', emoji: '🙅' }, { word: 'گندگی کرنا', wordUr: 'گندگی کرنا', emoji: '🗑️' }], 'The action is healthy.', 'شاباش! یہ ایک اچھی عادت ہے۔'),
+  independentOptions('habits-ur-2', 'ur', 'اچھی عادتیں', 'روزمرہ زندگی', 'multiple-choice', 'ان میں اچھی عادت کون سی ہے؟', 'اچھا عمل منتخب کریں۔', 'کھلونے بانٹنا', 'کھلونے بانٹنا', '🧸', [{ word: 'کھلونے چھیننا', wordUr: 'کھلونے چھیننا', emoji: '✋' }, { word: 'کھلونے چھپانا', wordUr: 'کھلونے چھپانا', emoji: '🙈' }], 'The action is kind.', 'شاباش! یہ ایک اچھی عادت ہے۔'),
+  independentOptions('habits-ur-3', 'ur', 'اچھی عادتیں', 'روزمرہ زندگی', 'multiple-choice', 'ان میں اچھی عادت کون سی ہے؟', 'محفوظ عمل منتخب کریں۔', 'کچرا ڈبے میں ڈالنا', 'کچرا ڈبے میں ڈالنا', '🗑️', [{ word: 'کچرا پھینکنا', wordUr: 'کچرا پھینکنا', emoji: '🚮' }, { word: 'گندگی چھوڑنا', wordUr: 'گندگی چھوڑنا', emoji: '🧹' }], 'The action is helpful.', 'شاباش! یہ ایک اچھی عادت ہے۔'),
+];
+
+const memoryTask = (language: 'en' | 'ur') => independentOptions(`memory-${language}`, language, language === 'en' ? 'Memory Match' : 'یادداشت کا کھیل', language === 'en' ? 'Memory' : 'یادداشت', 'memory', language === 'en' ? 'Turn over two cards and find the matching pictures.' : 'دو کارڈ پلٹیں اور ایک جیسی تصویریں تلاش کریں۔', language === 'en' ? 'Find all four pairs.' : 'چاروں جوڑے تلاش کریں۔', 'complete', 'مکمل', '🃏', [{ word: 'play', wordUr: 'کھیل', emoji: '🃏' }, { word: 'match', wordUr: 'جوڑا', emoji: '🃏' }], 'Great match!', 'شاباش! جوڑا مل گیا۔');
+const englishMemoryPairs: MemoryPair[] = [{ id: 'apple', emoji: '🍎', en: 'Apple', ur: 'سیب' }, { id: 'star', emoji: '⭐', en: 'Star', ur: 'ستارہ' }, { id: 'cat', emoji: '🐱', en: 'Cat', ur: 'بلی' }, { id: 'ball', emoji: '⚽', en: 'Ball', ur: 'گیند' }];
+const urduMemoryPairs: MemoryPair[] = englishMemoryPairs;
+
 export const englishActivities: ActivityDefinition[] = [
   { id: 'abc-adventure', icon: '🍎', title: 'ABC Adventure', category: 'Letters', typeLabel: 'Multiple Choice', description: 'Learn A, B and C with pictures.', tasks: englishTasks },
   { id: 'count-stars', icon: '⭐', title: 'Count the Stars', category: 'Numbers', typeLabel: 'Counting', description: 'Count the stars and choose the correct number.', tasks: [englishIndependent[0]] },
   { id: 'color-garden', icon: '🌈', title: 'Color Garden', category: 'Colors', typeLabel: 'Sorting', description: 'Discover and match beautiful colors.', tasks: [englishIndependent[1]] },
   { id: 'shape-safari', icon: '🔵', title: 'Shape Safari', category: 'Shapes', typeLabel: 'Matching Pairs', description: 'Find and match the same shapes.', tasks: [englishIndependent[2]] },
   { id: 'big-small', icon: '🐘🐭', title: 'Big or Small', category: 'Thinking', typeLabel: 'Multiple Choice', description: 'Choose which object is big or small.', tasks: [englishIndependent[3]] },
+  { id: 'animal-sounds', icon: '🦁', title: 'Animal Sounds', category: 'Animals', typeLabel: 'Listen and Choose', description: 'Listen to the sound and find the correct animal.', tasks: animalEnglish },
+  { id: 'number-train', icon: '🚂', title: 'Number Train', category: 'Numbers', typeLabel: 'Missing Number', description: 'Find the missing number and complete the train.', tasks: numberTrainEnglish },
+  { id: 'memory-match', icon: '🃏🃏', title: 'Memory Match', category: 'Memory', typeLabel: 'Matching Cards', description: 'Turn over the cards and find matching pairs.', tasks: [memoryTask('en')], game: 'memory', memoryPairs: englishMemoryPairs },
+  { id: 'complete-pattern', icon: '🔴🔵', title: 'Complete the Pattern', category: 'Thinking', typeLabel: 'Pattern Recognition', description: 'Look carefully and choose what comes next.', tasks: patternEnglish },
+  { id: 'good-habits', icon: '🧼', title: 'Good Habits', category: 'Life Skills', typeLabel: 'Choose the Right Action', description: 'Learn healthy, safe and kind daily habits.', tasks: habitEnglish },
 ];
 export const urduActivities: ActivityDefinition[] = [
   { id: 'urdu-letters-adventure', icon: 'الف', title: 'حروف کی مہم', category: 'حروف', typeLabel: 'درست جواب منتخب کریں', description: 'تصاویر کے ساتھ اردو حروف سیکھیں۔', tasks: urduTasks },
@@ -75,6 +125,11 @@ export const urduActivities: ActivityDefinition[] = [
   { id: 'urdu-color-garden', icon: '🌈', title: 'رنگوں کا باغ', category: 'رنگ', typeLabel: 'ترتیب دیں', description: 'خوبصورت رنگ پہچانیں اور ملائیں۔', tasks: [urduIndependent[1]] },
   { id: 'urdu-shape-safari', icon: '🔵', title: 'اشکال کی سیر', category: 'اشکال', typeLabel: 'ایک جیسی اشکال ملائیں', description: 'ایک جیسی اشکال تلاش کرکے ملائیں۔', tasks: [urduIndependent[2]] },
   { id: 'urdu-big-small', icon: '🐘🐭', title: 'بڑا یا چھوٹا', category: 'سوچ اور سمجھ', typeLabel: 'درست جواب منتخب کریں', description: 'بڑی اور چھوٹی چیز کی پہچان کریں۔', tasks: [urduIndependent[3]] },
+  { id: 'urdu-animal-sounds', icon: '🦁', title: 'جانوروں کی آوازیں', category: 'جانور', typeLabel: 'آواز سنیں اور منتخب کریں', description: 'آواز سنیں اور درست جانور پہچانیں۔', tasks: animalUrdu },
+  { id: 'urdu-number-train', icon: '🚂', title: 'نمبروں کی ریل گاڑی', category: 'اعداد', typeLabel: 'غائب عدد تلاش کریں', description: 'غائب عدد تلاش کرکے ریل گاڑی مکمل کریں۔', tasks: numberTrainUrdu },
+  { id: 'urdu-memory-match', icon: '🃏🃏', title: 'یادداشت کا کھیل', category: 'یادداشت', typeLabel: 'ایک جیسے کارڈ ملائیں', description: 'کارڈ پلٹیں اور ایک جیسے جوڑے تلاش کریں۔', tasks: [memoryTask('ur')], game: 'memory', memoryPairs: urduMemoryPairs },
+  { id: 'urdu-complete-pattern', icon: '🔴🔵', title: 'ترتیب مکمل کریں', category: 'سوچ اور سمجھ', typeLabel: 'ترتیب پہچانیں', description: 'ترتیب دیکھیں اور بتائیں آگے کیا آئے گا۔', tasks: patternUrdu },
+  { id: 'urdu-good-habits', icon: '🧼', title: 'اچھی عادتیں', category: 'روزمرہ زندگی', typeLabel: 'درست عمل منتخب کریں', description: 'صحت مند، محفوظ اور اچھی عادتیں سیکھیں۔', tasks: habitUrdu },
 ];
 
 export function validateAlphabetActivities(items: AlphabetActivity[], language: 'en' | 'ur'): string[] {
