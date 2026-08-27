@@ -5,6 +5,7 @@ export type TaskOption = { id: string; emoji: string; word: string; wordUr?: str
 export type LocalizedText = { en: string; ur: string };
 export type TaskContent = { title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText; audioId: { en: string; ur: string } };
 export type Task = { id: string; letter?: string; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; answerId: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
+export type ActivityDefinition = { id: string; icon: string; title: string; category: string; typeLabel: string; description: string; tasks: Task[] };
 export type AlphabetActivity = { id: string; target: string; targetName: string; answer: string; emoji: string; wrong: { word: string; emoji: string }[]; title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText };
 
 const text = (en: string, ur: string): LocalizedText => ({ en, ur });
@@ -42,6 +43,40 @@ export const urduAdventureLabels = ['حروف کی مہم', 'ستارے گنیں
 export const englishTasks = englishAlphabetActivities.map((item, index) => alphabet(item, 'en', englishActivityLabels[index]));
 export const urduTasks = urduAlphabetActivities.map((item) => alphabet(item, 'ur', item === urduAlphabetActivities[0] ? 'حروف کی مہم' : undefined));
 
+const independentOptions = (id: string, language: 'en' | 'ur', title: string, subject: string, type: TaskType, prompt: string, hint: string, answer: string, answerUr: string, answerEmoji: string, wrong: Array<{ word: string; wordUr: string; emoji: string }>, success: string, successUr: string) => {
+  const answerId = `${id}-answer`;
+  const options = [{ id: answerId, word: language === 'en' ? answer : '', wordUr: language === 'ur' ? answerUr : undefined, emoji: answerEmoji }, ...wrong.map((option, index) => ({ id: `${id}-wrong-${index}`, word: language === 'en' ? option.word : '', wordUr: language === 'ur' ? option.wordUr : undefined, emoji: option.emoji }))];
+  return { id, title, subject, type, prompt, hint, answer: language === 'en' ? answer : '', answerId, options, reward: 3, coins: 12, content: { title: text(language === 'en' ? title : '', language === 'ur' ? title : ''), instruction: text(language === 'en' ? prompt : '', language === 'ur' ? prompt : ''), hint: text(language === 'en' ? hint : '', language === 'ur' ? hint : ''), success: text(language === 'en' ? success : '', language === 'ur' ? successUr : ''), retry: text(language === 'en' ? 'Let’s try again. Listen carefully.' : '', language === 'ur' ? 'دوبارہ کوشش کریں۔ غور سے سنیں۔' : ''), audioId: { en: `task-${id}`, ur: `task-${id}` } } } as Task;
+};
+
+const englishIndependent = [
+  independentOptions('english-count-stars', 'en', 'Count the Stars', 'Numbers', 'counting', 'How many stars do you see?', 'Count each star carefully.', '4', '۴', '⭐', [{ word: '3', wordUr: '۳', emoji: '⭐' }, { word: '5', wordUr: '۵', emoji: '⭐' }], 'Great counting! There are 4 stars.', 'بہت خوب! چار ستارے ہیں۔'),
+  independentOptions('english-color-garden', 'en', 'Color Garden', 'Colors', 'sorting', 'Which color is the red flower?', 'Look for the red flower.', 'Red', 'سرخ', '🌹', [{ word: 'Blue', wordUr: 'نیلا', emoji: '🔵' }, { word: 'Yellow', wordUr: 'پیلا', emoji: '🌼' }], 'Wonderful! Red is the color.', 'بہت خوب! یہ سرخ رنگ ہے۔'),
+  independentOptions('english-shape-safari', 'en', 'Shape Safari', 'Shapes', 'matching-pairs', 'Which shape matches the circle?', 'Find the shape with no corners.', 'Circle', 'دائرہ', '⚪', [{ word: 'Triangle', wordUr: 'مثلث', emoji: '🔺' }, { word: 'Square', wordUr: 'مربع', emoji: '🟦' }], 'Great matching! The circle matches.', 'بہت خوب! دائرہ مل گیا۔'),
+  independentOptions('english-big-small', 'en', 'Big or Small', 'Thinking', 'multiple-choice', 'Which animal is big?', 'Choose the bigger animal.', 'Elephant', 'ہاتھی', '🐘', [{ word: 'Mouse', wordUr: 'چوہا', emoji: '🐭' }, { word: 'Ant', wordUr: 'چیونٹی', emoji: '🐜' }], 'That is big! Well done.', 'شاباش! یہ بڑا ہے۔'),
+];
+const urduIndependent = [
+  independentOptions('urdu-count-stars', 'ur', 'ستارے گنیں', 'گنتی', 'counting', 'کتنے ستارے نظر آ رہے ہیں؟', 'ہر ستارہ گنیں۔', '۴', '۴', '⭐', [{ word: '۳', wordUr: '۳', emoji: '⭐' }, { word: '۵', wordUr: '۵', emoji: '⭐' }], 'There are 4 stars.', 'بہت خوب! چار ستارے ہیں۔'),
+  independentOptions('urdu-color-garden', 'ur', 'رنگوں کا باغ', 'رنگ', 'sorting', 'سرخ پھول کا رنگ منتخب کریں۔', 'سرخ پھول تلاش کریں۔', 'سرخ', 'سرخ', '🌹', [{ word: 'نیلا', wordUr: 'نیلا', emoji: '🔵' }, { word: 'پیلا', wordUr: 'پیلا', emoji: '🌼' }], 'The color is red.', 'بہت خوب! یہ سرخ رنگ ہے۔'),
+  independentOptions('urdu-shape-safari', 'ur', 'اشکال کی سیر', 'اشکال', 'matching-pairs', 'دائرے جیسی شکل منتخب کریں۔', 'بغیر کونوں والی شکل تلاش کریں۔', 'دائرہ', 'دائرہ', '⚪', [{ word: 'مثلث', wordUr: 'مثلث', emoji: '🔺' }, { word: 'مربع', wordUr: 'مربع', emoji: '🟦' }], 'The circle matches.', 'بہت خوب! دائرہ مل گیا۔'),
+  independentOptions('urdu-big-small', 'ur', 'بڑا یا چھوٹا', 'سوچ اور سمجھ', 'multiple-choice', 'بڑا جانور منتخب کریں۔', 'بڑی چیز تلاش کریں۔', 'ہاتھی', 'ہاتھی', '🐘', [{ word: 'چوہا', wordUr: 'چوہا', emoji: '🐭' }, { word: 'چیونٹی', wordUr: 'چیونٹی', emoji: '🐜' }], 'The elephant is big.', 'شاباش! ہاتھی بڑا ہے۔'),
+];
+
+export const englishActivities: ActivityDefinition[] = [
+  { id: 'abc-adventure', icon: '🍎', title: 'ABC Adventure', category: 'Letters', typeLabel: 'Multiple Choice', description: 'Learn A, B and C with pictures.', tasks: englishTasks },
+  { id: 'count-stars', icon: '⭐', title: 'Count the Stars', category: 'Numbers', typeLabel: 'Counting', description: 'Count the stars and choose the correct number.', tasks: [englishIndependent[0]] },
+  { id: 'color-garden', icon: '🌈', title: 'Color Garden', category: 'Colors', typeLabel: 'Sorting', description: 'Discover and match beautiful colors.', tasks: [englishIndependent[1]] },
+  { id: 'shape-safari', icon: '🔵', title: 'Shape Safari', category: 'Shapes', typeLabel: 'Matching Pairs', description: 'Find and match the same shapes.', tasks: [englishIndependent[2]] },
+  { id: 'big-small', icon: '🐘🐭', title: 'Big or Small', category: 'Thinking', typeLabel: 'Multiple Choice', description: 'Choose which object is big or small.', tasks: [englishIndependent[3]] },
+];
+export const urduActivities: ActivityDefinition[] = [
+  { id: 'urdu-letters-adventure', icon: 'الف', title: 'حروف کی مہم', category: 'حروف', typeLabel: 'درست جواب منتخب کریں', description: 'تصاویر کے ساتھ اردو حروف سیکھیں۔', tasks: urduTasks },
+  { id: 'urdu-count-stars', icon: '⭐', title: 'ستارے گنیں', category: 'گنتی', typeLabel: 'چیزیں گنیں', description: 'ستارے گنیں اور درست عدد منتخب کریں۔', tasks: [urduIndependent[0]] },
+  { id: 'urdu-color-garden', icon: '🌈', title: 'رنگوں کا باغ', category: 'رنگ', typeLabel: 'ترتیب دیں', description: 'خوبصورت رنگ پہچانیں اور ملائیں۔', tasks: [urduIndependent[1]] },
+  { id: 'urdu-shape-safari', icon: '🔵', title: 'اشکال کی سیر', category: 'اشکال', typeLabel: 'ایک جیسی اشکال ملائیں', description: 'ایک جیسی اشکال تلاش کرکے ملائیں۔', tasks: [urduIndependent[2]] },
+  { id: 'urdu-big-small', icon: '🐘🐭', title: 'بڑا یا چھوٹا', category: 'سوچ اور سمجھ', typeLabel: 'درست جواب منتخب کریں', description: 'بڑی اور چھوٹی چیز کی پہچان کریں۔', tasks: [urduIndependent[3]] },
+];
+
 export function validateAlphabetActivities(items: AlphabetActivity[], language: 'en' | 'ur'): string[] {
   const errors: string[] = [];
   for (const item of items) {
@@ -57,6 +92,7 @@ export const urduAlphabetValidationErrors = validateAlphabetActivities(urduAlpha
 if (urduAlphabetValidationErrors.length) throw new Error(urduAlphabetValidationErrors.join('; '));
 if ('سیب'.startsWith('ا') || !'انار'.startsWith('ا') || !'سیب'.startsWith('س')) throw new Error('Urdu alphabet regression validation failed');
 
-export const tasksFor = (_level: ClassLevel, language: LanguageMode = 'en'): Task[] => language === 'ur' ? urduTasks : englishTasks;
+export const activitiesFor = (_level: ClassLevel, language: LanguageMode = 'en'): ActivityDefinition[] => language === 'ur' ? urduActivities : englishActivities;
+export const tasksFor = (_level: ClassLevel, language: LanguageMode = 'en'): Task[] => activitiesFor(_level, language).flatMap((activity) => activity.tasks);
 export const allTasks = [...englishTasks, ...urduTasks];
 export const taskText = (task: Task, language: LanguageMode, field: keyof Omit<TaskContent, 'audioId'>): string => language === 'ur' ? task.content[field].ur : task.content[field].en;
