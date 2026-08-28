@@ -25,6 +25,14 @@
 .memory-card strong { font-size:11px; }
 .memory-card.open { background:#eaf9fd; border-color:var(--blue); }
 @media(max-width:520px){.memory-grid{grid-template-columns:repeat(4,1fr);gap:7px}.memory-card{min-height:78px;border-radius:14px}.memory-card span{font-size:31px}.memory-card strong{font-size:9px}}
+.count-star-display { width:min(100%,520px); min-height:180px; margin:20px auto; padding:18px; display:flex; flex-wrap:wrap; align-content:center; justify-content:center; gap:8px 13px; color:#f4bd16; font-size:clamp(38px,7vw,64px); line-height:1; background:#fff9d7; border-radius:28px; box-shadow:inset 0 -7px #f5e9a9; }
+.count-star { display:inline-block; animation:count-star-pop .28s ease-out both; }
+.count-option strong { font-size:clamp(25px,5vw,38px); }
+.count-question { margin:0; color:var(--blue-dark); font-size:18px; font-weight:800; }
+.count-game-page .feedback p { margin:0; font-size:13px; }
+@keyframes count-star-pop { from { opacity:0; transform:scale(.82); } to { opacity:1; transform:scale(1); } }
+@media(prefers-reduced-motion:reduce){.count-star{animation:none}}
+@media(max-width:520px){.count-star-display{min-height:150px;gap:7px 9px;padding:16px}.count-star{font-size:42px}}
 .completion-actions { max-width:780px; }
 .voice-settings-panel .panel-heading { align-items:flex-start; }
 .voice-settings-panel .panel-heading > span { display:inline-flex; align-items:center; gap:5px; }

@@ -4,7 +4,7 @@ export type TaskType = 'multiple-choice' | 'matching-pairs' | 'sorting' | 'seque
 export type TaskOption = { id: string; emoji: string; word: string; wordUr?: string };
 export type LocalizedText = { en: string; ur: string };
 export type TaskContent = { title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText; audioId: { en: string; ur: string } };
-export type Task = { id: string; letter?: string; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; answerId: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
+export type Task = { id: string; letter?: string; visualCount?: number; numberValue?: number; title: string; subject: string; type: TaskType; prompt: string; hint: string; answer: string; answerId: string; options: TaskOption[]; reward: number; coins: number; content: TaskContent };
 export type MemoryPair = { id: string; emoji: string; en: string; ur: string };
 export type ActivityDefinition = { id: string; icon: string; title: string; category: string; typeLabel: string; description: string; tasks: Task[]; game?: 'question' | 'memory'; memoryPairs?: MemoryPair[] };
 export type AlphabetActivity = { id: string; target: string; targetName: string; answer: string; emoji: string; wrong: { word: string; emoji: string }[]; title: LocalizedText; instruction: LocalizedText; hint: LocalizedText; success: LocalizedText; retry: LocalizedText };
@@ -49,6 +49,17 @@ const independentOptions = (id: string, language: 'en' | 'ur', title: string, su
   const options = [{ id: answerId, word: language === 'en' ? answer : '', wordUr: language === 'ur' ? answerUr : undefined, emoji: answerEmoji }, ...wrong.map((option, index) => ({ id: `${id}-wrong-${index}`, word: language === 'en' ? option.word : '', wordUr: language === 'ur' ? option.wordUr : undefined, emoji: option.emoji }))];
   return { id, title, subject, type, prompt, hint, answer: language === 'en' ? answer : '', answerId, options, reward: 3, coins: 12, content: { title: text(language === 'en' ? title : '', language === 'ur' ? title : ''), instruction: text(language === 'en' ? prompt : '', language === 'ur' ? prompt : ''), hint: text(language === 'en' ? hint : '', language === 'ur' ? hint : ''), success: text(language === 'en' ? success : '', language === 'ur' ? successUr : ''), retry: text(language === 'en' ? 'Let’s try again. Listen carefully.' : '', language === 'ur' ? 'دوبارہ کوشش کریں۔ غور سے سنیں۔' : ''), audioId: { en: `task-${id}`, ur: `task-${id}` } } } as Task;
 };
+
+const urduNumbers = ['', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۱۰'];
+const countTask = (language: 'en' | 'ur', number: number): Task => {
+  const values = [Math.max(1, number - 1), number, Math.min(10, number + 1)].filter((value, index, all) => all.indexOf(value) === index);
+  while (values.length < 3) values.push(values.length + 1);
+  const answerId = `count-stars-${language}-${number}-answer`;
+  const options = values.map((value, index) => ({ id: value === number ? answerId : `count-stars-${language}-${number}-wrong-${index}`, word: language === 'en' ? String(value) : '', wordUr: language === 'ur' ? urduNumbers[value] : undefined, emoji: '' }));
+  return { id: `count-stars-${language}-${number}`, visualCount: number, numberValue: number, title: language === 'en' ? 'Count the Stars' : 'ستارے گنیں', subject: language === 'en' ? 'Numbers' : 'گنتی', type: 'counting', prompt: language === 'en' ? 'Count the stars. How many stars do you see?' : 'ستارے گنیں۔ تصویر میں کتنے ستارے ہیں؟', hint: language === 'en' ? 'Count each star carefully.' : 'ہر ستارہ غور سے گنیں۔', answer: language === 'en' ? String(number) : '', answerId, options, reward: 3, coins: 12, content: { title: text(language === 'en' ? 'Count the Stars' : '', language === 'ur' ? 'ستارے گنیں' : ''), instruction: text(language === 'en' ? 'Count the stars. How many stars do you see?' : '', language === 'ur' ? 'ستارے گنیں۔ تصویر میں کتنے ستارے ہیں؟' : ''), hint: text(language === 'en' ? 'Count each star carefully.' : '', language === 'ur' ? 'ہر ستارہ غور سے گنیں۔' : ''), success: text(language === 'en' ? `Great counting! You found ${number} stars.` : '', language === 'ur' ? `شاباش! آپ نے ${urduNumbers[number]} ستارے درست گنے۔` : ''), retry: text(language === 'en' ? 'Let’s count the stars again.' : '', language === 'ur' ? 'ستارے دوبارہ گنیں۔' : ''), audioId: { en: `count-${number}`, ur: `count-${number}` } } };
+};
+export const englishCountTasks = Array.from({ length: 10 }, (_, index) => countTask('en', index + 1));
+export const urduCountTasks = Array.from({ length: 10 }, (_, index) => countTask('ur', index + 1));
 
 const englishIndependent = [
   independentOptions('english-count-stars', 'en', 'Count the Stars', 'Numbers', 'counting', 'How many stars do you see?', 'Count each star carefully.', '4', '۴', '⭐', [{ word: '3', wordUr: '۳', emoji: '⭐' }, { word: '5', wordUr: '۵', emoji: '⭐' }], 'Great counting! There are 4 stars.', 'بہت خوب! چار ستارے ہیں۔'),
@@ -109,7 +120,7 @@ const urduMemoryPairs: MemoryPair[] = englishMemoryPairs;
 
 export const englishActivities: ActivityDefinition[] = [
   { id: 'abc-adventure', icon: '🍎', title: 'ABC Adventure', category: 'Letters', typeLabel: 'Multiple Choice', description: 'Learn A, B and C with pictures.', tasks: englishTasks },
-  { id: 'count-stars', icon: '⭐', title: 'Count the Stars', category: 'Numbers', typeLabel: 'Counting', description: 'Count the stars and choose the correct number.', tasks: [englishIndependent[0]] },
+  { id: 'count-stars', icon: '⭐', title: 'Count the Stars', category: 'Numbers', typeLabel: 'Counting', description: 'Count the stars and choose the correct number.', tasks: englishCountTasks },
   { id: 'color-garden', icon: '🌈', title: 'Color Garden', category: 'Colors', typeLabel: 'Sorting', description: 'Discover and match beautiful colors.', tasks: [englishIndependent[1]] },
   { id: 'shape-safari', icon: '🔵', title: 'Shape Safari', category: 'Shapes', typeLabel: 'Matching Pairs', description: 'Find and match the same shapes.', tasks: [englishIndependent[2]] },
   { id: 'big-small', icon: '🐘🐭', title: 'Big or Small', category: 'Thinking', typeLabel: 'Multiple Choice', description: 'Choose which object is big or small.', tasks: [englishIndependent[3]] },
@@ -121,7 +132,7 @@ export const englishActivities: ActivityDefinition[] = [
 ];
 export const urduActivities: ActivityDefinition[] = [
   { id: 'urdu-letters-adventure', icon: 'الف', title: 'حروف کی مہم', category: 'حروف', typeLabel: 'درست جواب منتخب کریں', description: 'تصاویر کے ساتھ اردو حروف سیکھیں۔', tasks: urduTasks },
-  { id: 'urdu-count-stars', icon: '⭐', title: 'ستارے گنیں', category: 'گنتی', typeLabel: 'چیزیں گنیں', description: 'ستارے گنیں اور درست عدد منتخب کریں۔', tasks: [urduIndependent[0]] },
+  { id: 'urdu-count-stars', icon: '⭐', title: 'ستارے گنیں', category: 'گنتی', typeLabel: 'چیزیں گنیں', description: 'ستارے گنیں اور درست عدد منتخب کریں۔', tasks: urduCountTasks },
   { id: 'urdu-color-garden', icon: '🌈', title: 'رنگوں کا باغ', category: 'رنگ', typeLabel: 'ترتیب دیں', description: 'خوبصورت رنگ پہچانیں اور ملائیں۔', tasks: [urduIndependent[1]] },
   { id: 'urdu-shape-safari', icon: '🔵', title: 'اشکال کی سیر', category: 'اشکال', typeLabel: 'ایک جیسی اشکال ملائیں', description: 'ایک جیسی اشکال تلاش کرکے ملائیں۔', tasks: [urduIndependent[2]] },
   { id: 'urdu-big-small', icon: '🐘🐭', title: 'بڑا یا چھوٹا', category: 'سوچ اور سمجھ', typeLabel: 'درست جواب منتخب کریں', description: 'بڑی اور چھوٹی چیز کی پہچان کریں۔', tasks: [urduIndependent[3]] },
